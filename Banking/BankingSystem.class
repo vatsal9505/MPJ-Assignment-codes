@@ -1,0 +1,260 @@
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.InputMismatchException;
+import java.util.Scanner;
+
+public class BankingSystem {
+   static final String FILE_NAME = "customers.txt";
+   static Scanner sc;
+   static ArrayList<Customer> customers;
+
+   public BankingSystem() {
+   }
+
+   static void validateCustomerId(int var0) throws InvalidCustomerIdException {
+      if (var0 < 1 || var0 > 20) {
+         throw new InvalidCustomerIdException("Customer ID must be between 1 and 20.");
+      }
+   }
+
+   static void validatePositiveAmount(double var0) throws InvalidAmountException {
+      if (var0 <= (double)0.0F) {
+         throw new InvalidAmountException("Amount must be positive.");
+      }
+   }
+
+   static void validateMinimumOpeningBalance(double var0) throws MinimumBalanceException {
+      if (var0 < (double)1000.0F) {
+         throw new MinimumBalanceException("Account must be created with minimum Rs. 1000.");
+      }
+   }
+
+   static Customer findCustomer(int var0) {
+      for(Customer var2 : customers) {
+         if (var2.getCid() == var0) {
+            return var2;
+         }
+      }
+
+      return null;
+   }
+
+   static void saveToFile() {
+      try {
+         BufferedWriter var0 = new BufferedWriter(new FileWriter("customers.txt"));
+
+         try {
+            for(Customer var2 : customers) {
+               int var10001 = var2.getCid();
+               var0.write(var10001 + "," + var2.getCname() + "," + var2.getAmount());
+               var0.newLine();
+            }
+
+            System.out.println("Records saved to file successfully.");
+         } catch (Throwable var4) {
+            try {
+               var0.close();
+            } catch (Throwable var3) {
+               var4.addSuppressed(var3);
+            }
+
+            throw var4;
+         }
+
+         var0.close();
+      } catch (IOException var5) {
+         System.out.println("File Error: " + var5.getMessage());
+      }
+
+   }
+
+   static void loadFromFile() {
+      File var0 = new File("customers.txt");
+      if (var0.exists()) {
+         try {
+            BufferedReader var1 = new BufferedReader(new FileReader("customers.txt"));
+
+            String var2;
+            try {
+               while((var2 = var1.readLine()) != null) {
+                  String[] var3 = var2.split(",");
+                  if (var3.length == 3) {
+                     int var4 = Integer.parseInt(var3[0]);
+                     String var5 = var3[1];
+                     double var6 = Double.parseDouble(var3[2]);
+                     customers.add(new Customer(var4, var5, var6));
+                  }
+               }
+            } catch (Throwable var9) {
+               try {
+                  var1.close();
+               } catch (Throwable var8) {
+                  var9.addSuppressed(var8);
+               }
+
+               throw var9;
+            }
+
+            var1.close();
+         } catch (NumberFormatException | IOException var10) {
+            System.out.println("Error loading file: " + ((Exception)var10).getMessage());
+         }
+
+      }
+   }
+
+   static void createAccount() {
+      try {
+         System.out.print("Enter Customer ID: ");
+         int var0 = sc.nextInt();
+         sc.nextLine();
+         validateCustomerId(var0);
+         if (findCustomer(var0) != null) {
+            System.out.println("Customer with this ID already exists.");
+            return;
+         }
+
+         System.out.print("Enter Customer Name: ");
+         String var1 = sc.nextLine();
+         System.out.print("Enter Opening Balance: ");
+         double var2 = sc.nextDouble();
+         validatePositiveAmount(var2);
+         validateMinimumOpeningBalance(var2);
+         Customer var4 = new Customer(var0, var1, var2);
+         customers.add(var4);
+         System.out.println("Account created successfully.");
+         saveToFile();
+      } catch (InvalidAmountException | MinimumBalanceException | InvalidCustomerIdException var5) {
+         System.out.println("Exception: " + ((Exception)var5).getMessage());
+      } catch (InputMismatchException var6) {
+         System.out.println("Invalid input type. Please enter correct values.");
+         sc.nextLine();
+      }
+
+   }
+
+   static void deposit() {
+      try {
+         System.out.print("Enter Customer ID: ");
+         int var0 = sc.nextInt();
+         Customer var1 = findCustomer(var0);
+         if (var1 == null) {
+            System.out.println("Customer not found.");
+            return;
+         }
+
+         System.out.print("Enter Deposit Amount: ");
+         double var2 = sc.nextDouble();
+         validatePositiveAmount(var2);
+         var1.setAmount(var1.getAmount() + var2);
+         System.out.println("Deposit successful. Updated Balance = Rs. " + var1.getAmount());
+         saveToFile();
+      } catch (InvalidAmountException var4) {
+         System.out.println("Exception: " + var4.getMessage());
+      } catch (InputMismatchException var5) {
+         System.out.println("Invalid input type.");
+         sc.nextLine();
+      }
+
+   }
+
+   static void withdraw() {
+      try {
+         System.out.print("Enter Customer ID: ");
+         int var0 = sc.nextInt();
+         Customer var1 = findCustomer(var0);
+         if (var1 == null) {
+            System.out.println("Customer not found.");
+            return;
+         }
+
+         System.out.print("Enter Withdrawal Amount: ");
+         double var2 = sc.nextDouble();
+         validatePositiveAmount(var2);
+         if (var2 > var1.getAmount()) {
+            throw new InsufficientFundsException("Withdrawal amount exceeds total balance.");
+         }
+
+         var1.setAmount(var1.getAmount() - var2);
+         System.out.println("Withdrawal successful. Updated Balance = Rs. " + var1.getAmount());
+         saveToFile();
+      } catch (InsufficientFundsException | InvalidAmountException var4) {
+         System.out.println("Exception: " + ((Exception)var4).getMessage());
+      } catch (InputMismatchException var5) {
+         System.out.println("Invalid input type.");
+         sc.nextLine();
+      }
+
+   }
+
+   static void displayAll() {
+      if (customers.isEmpty()) {
+         System.out.println("No customer records found.");
+      } else {
+         System.out.println("\n--- Customer Records ---");
+
+         for(Customer var1 : customers) {
+            System.out.println(var1);
+         }
+
+      }
+   }
+
+   public static void main(String[] var0) {
+      loadFromFile();
+
+      int var1;
+      do {
+         System.out.println("\n===== Banking System Menu =====");
+         System.out.println("1. Create Account");
+         System.out.println("2. Deposit");
+         System.out.println("3. Withdraw");
+         System.out.println("4. Display All Customers");
+         System.out.println("5. Save Records to File");
+         System.out.println("6. Exit");
+         System.out.print("Enter your choice: ");
+
+         try {
+            var1 = sc.nextInt();
+            switch (var1) {
+               case 1:
+                  createAccount();
+                  break;
+               case 2:
+                  deposit();
+                  break;
+               case 3:
+                  withdraw();
+                  break;
+               case 4:
+                  displayAll();
+                  break;
+               case 5:
+                  saveToFile();
+                  break;
+               case 6:
+                  System.out.println("Exiting program...");
+                  break;
+               default:
+                  System.out.println("Invalid choice. Please enter 1 to 6.");
+            }
+         } catch (InputMismatchException var3) {
+            System.out.println("Please enter a numeric choice.");
+            sc.nextLine();
+            var1 = 0;
+         }
+      } while(var1 != 6);
+
+      sc.close();
+   }
+
+   static {
+      sc = new Scanner(System.in);
+      customers = new ArrayList();
+   }
+}
